@@ -39,7 +39,7 @@ private void setupNetworkNodes()
 private void runController()
 {
     long start =System.currentTimeMillis();
-    while(System.currentTimeMillis()<= start+ (timer*1000)) // run each second
+    while(System.currentTimeMillis()<= start+ ((timer+3)*1000)) // run each second
     {  
         setupNetworkNodes();
         for(int i =0;i<10;i++)
@@ -76,7 +76,7 @@ private void writeToFile(String line)  throws IOException
                                 
     writer.write(line);
     writer.write(System.lineSeparator());
-    System.out.println("Controller written data");
+   // System.out.println("Controller written data");
     
     writer.close();
 }
