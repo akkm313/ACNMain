@@ -1,5 +1,4 @@
 import java.util.*;
-import java.util.spi.ToolProvider;
 import java.io.*;
 
 public class Node {
@@ -180,7 +179,7 @@ public class Node {
                     if(t2.containsKey(first.id))
                       t2.remove(first.id); // remove from t2
                  }
-                 else
+                 else if(first.parent>second.parent)
                  {
                    
                     List<Integer> li =   combinedTree.getOrDefault(second.id,new ArrayList<>());
@@ -190,6 +189,14 @@ public class Node {
                     if(t1.containsKey(second.id))
                       t1.remove(second.id); // remove from t1
     
+
+                 }
+
+                 else{
+                    List<Integer> li =   combinedTree.getOrDefault(second.id,new ArrayList<>());
+                    if(!li.contains(second.parent))
+                       li.add(second.parent);
+                    combinedTree.put(second.id,li);
 
                  }
             }
@@ -247,8 +254,9 @@ public class Node {
        
 
         }
-
+   System.out.println("***********************************************"); 
    System.out.println("Combined Tree  for node "+id+" is "+combinedTree);
+   System.out.println("***********************************************"); 
    inTree = new HashMap<>(combinedTree);
         
 
