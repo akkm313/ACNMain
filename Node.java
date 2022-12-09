@@ -82,7 +82,8 @@ public class Node {
     }
 
     private void sendIntree(int i) {
-        if(i==-1) System.out.println("Intree resent due to chage");
+        if(i==-1)
+         {System.out.println("[LOG]: Intree resent due to chage"); }
         String iTree = "intree " + id + " " + stringifyIntree();
         writeToFile(iTree);
     }
@@ -130,14 +131,14 @@ public class Node {
         List<ItreeNeighbor> t1Neighbors = getHopNeighbors(t1,hopCount);
         List<ItreeNeighbor> t2Neighbors = getHopNeighbors(t2, hopCount);
 
-        System.out.println("At Hop "+ hopCount+" t1 tree neighbors are "+t1Neighbors.size()+" in size and t2 tree neighbors are "+t2Neighbors.size()+" in size" );
-        System.out.println("T1 neighbors are : ");
-        for(ItreeNeighbor it:t1Neighbors)
-        System.out.print(it.id+" ");
-        System.out.println("T2 neighbors are : ");
-        for(ItreeNeighbor it:t2Neighbors)
-        System.out.print(it.id+" ");
-        System.out.println("");
+        // System.out.println("At Hop "+ hopCount+" t1 tree neighbors are "+t1Neighbors.size()+" in size and t2 tree neighbors are "+t2Neighbors.size()+" in size" );
+        // System.out.println("T1 neighbors are : ");
+        // for(ItreeNeighbor it:t1Neighbors)
+        // System.out.print(it.id+" ");
+        // System.out.println("T2 neighbors are : ");
+        // for(ItreeNeighbor it:t2Neighbors)
+        // System.out.print(it.id+" ");
+        // System.out.println("");
 
 
         HashMap<Integer, List<Integer>> combinedTree = new HashMap<>();
@@ -251,14 +252,6 @@ public class Node {
          hopCount++;
          t1Neighbors= getHopNeighbors(t1, hopCount);
          t2Neighbors = getHopNeighbors(t2, hopCount);
-        //  System.out.println("At Hop "+ hopCount+" t1 tree neighbors are "+t1Neighbors.size()+" in size and t2 tree neighbors are "+t2Neighbors.size()+" in size" );
-        //  System.out.println("T1 neighbors are : ");
-        //  for(ItreeNeighbor it:t1Neighbors)
-        //  System.out.print(it.id+" ");
-        //  System.out.println("T2 neighbors are : ");
-        //  for(ItreeNeighbor it:t2Neighbors)
-        //  System.out.print(it.id+" ");
-        //  System.out.println("");
 
          if(t1Neighbors.size()==0 && t2Neighbors.size()==0)
          break;
@@ -376,7 +369,7 @@ public class Node {
                 while ((msg = br.readLine()) != null) {
                     String[] msgSplit = msg.split(" ");
                     if (msgSplit[0].equals("intree")) {
-
+                  
                         Integer senderId = Integer.parseInt(msgSplit[1]);
                         String hString = msgSplit.length>2?msgSplit[2]:"";
                         HashMap<Integer, List<Integer>> t2 = mapifyIntree(hString);
@@ -399,6 +392,132 @@ public class Node {
                       
                        combineIntrees(t1,t2);    
                     }
+                  else if (msgSplit[0].equals("data"))
+                  { int source = Integer.parseInt(msgSplit[1]);
+                    String temp = msgSplit[2];
+                    String sourceRoute = temp.substring(1,temp.length()-1);
+                    String [] sourceRouteElements = sourceRoute.split(",");
+                    int immediateDestination = Integer.parseInt(""+sourceRouteElements[0]);
+                    if(immediateDestination!=id)
+                        { continue;}
+                    if(sourceRouteElements.length>1) // still in source Routing phase
+                    {
+                       StringBuilder newSourceRoute = new StringBuilder();
+                       newSourceRoute.append("(");
+                       for(int i=1;i<sourceRouteElements.length;i++)
+                       {
+                           newSourceRoute.append(sourceRouteElements[i]);
+                           newSourceRoute.append(",");
+                       }
+                       newSourceRoute.append(")");
+                       StringBuilder newMsg = new StringBuilder();
+                       newMsg.append("data ");
+                       newMsg.append(source);
+                       newMsg.append(" ");
+                       newMsg.append(newSourceRoute.toString());
+                       for(int i=3;i<msgSplit.length;i++)
+                       {
+                           newMsg.append(" ");
+                           newMsg.append(msgSplit[i]);
+                       }
+                       System.out.println("[LOG]: Node "+id+" still in source routing phase, hence forwarding message");
+                       writeToFile(newMsg.toString());
+
+                    }
+                    else
+                    {    // source Route length is only 1 which means we are at the end of the source route.
+                         if(msgSplit[3].equals("begin"))
+                         {  // there is nothing more after the source route meaning we are at the final destination.
+                            System.out.println("[SUCCESS]: At Node "+id+", message has reached final destination");
+                            StringBuilder rcvdMsg = new StringBuilder();
+                            for(int i =4;i<msgSplit.length;i++)
+                            {
+                                rcvdMsg.append(msgSplit[i]);
+                                rcvdMsg.append(" ");
+
+                            }
+                            rcvdMsg.deleteCharAt(rcvdMsg.length()-1);
+                            writeToReceivedFile(rcvdMsg.toString());
+
+                         }
+                         else {  // source route is done but there are more nodes in the rest of the path which needs to be handled
+                                 int nextHop = Integer.parseInt(msgSplit[3]);
+
+                                 List<Integer> path =new ArrayList<>();
+                                 if(!inTree.containsKey(nextHop))
+                                     {
+                                         System.out.println("[ABORT]: In tree does not contain entry for next hop");
+                                         continue;
+                                     }
+                                 int curr = inTree.get(nextHop).get(0);
+                                 path.add(nextHop);
+
+                                 while(curr!=id)
+                                 { 
+                                    path.add(curr);
+                                    curr= inTree.get(curr).get(0);
+                                 }
+                                Collections.reverse(path);
+                                int firstHop = path.get(0);
+                                path.remove(0);
+                                if(receivedTrees.get(firstHop)==null)
+                                  { System.out.println("[ABORT]:  Aborting Message send as relevant intree not received **"); 
+                                    continue;
+                                  }
+                                
+                              
+                      
+                                List<Integer> initialPath  = new ArrayList<>();
+                                int initialFirstHop = receivedTrees.get(firstHop).get(id).get(0);
+                              
+                                while(initialFirstHop!=firstHop)
+                                {
+                                    initialPath.add(initialFirstHop);
+                                    initialFirstHop = receivedTrees.get(firstHop).get(initialFirstHop).get(0);
+                                }
+                                initialPath.add(firstHop); 
+                               
+                                StringBuilder newMsg = new StringBuilder();
+                                newMsg.append("data ");
+                                newMsg.append(source);
+                                newMsg.append(" ");
+                                if(initialPath.size()>0)
+                                {
+                                    newMsg.append("(");
+                                    for(Integer i :initialPath)
+                                      {
+                                          newMsg.append(i);
+                                          newMsg.append(",");
+                                      }
+                                      newMsg.append(")");
+                                }
+                                newMsg.append(" ");
+                                if(path.size()>0)
+                                {
+                                for(Integer i :path)
+                                {
+                                    newMsg.append(i);
+                                    newMsg.append(" ");
+                                }  
+                            }
+                            for(int i=4;i<msgSplit.length;i++)
+                            {
+                                newMsg.append(msgSplit[i]);
+                                newMsg.append(" ");
+                            }
+                            newMsg.deleteCharAt(newMsg.length()-1); 
+                           System.out.println("[LOG]:Calculated new source route writing to file");
+                           writeToFile(newMsg.toString());
+
+                         }
+
+
+                    }
+
+                    
+                    
+                  }
+
 
                 }
                 br.close();
@@ -408,6 +527,21 @@ public class Node {
             e.printStackTrace();
         }
         return ipFile.length();
+
+    }
+
+
+    private void writeToReceivedFile(String msg)
+    {
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(rcvdFile, true))) {
+            writer.write(msg);
+            writer.write(System.lineSeparator());
+
+            writer.close();
+        } catch (IOException e) {
+
+            e.printStackTrace();
+        }
 
     }
 
@@ -445,7 +579,7 @@ public class Node {
     {
           if(!inTree.containsKey(destination))
             {
-                System.out.println("**Aborting Message send in node"+id+"for destination "+destination+" due to lack of path**");
+                System.out.println("[ABORT]: Aborting Message send in node"+id+" for message  "+message+" due to lack of path**");
                 return;
             }
           List<Integer> path = new ArrayList<>();
@@ -456,7 +590,7 @@ public class Node {
               path.add(currHop);
               if(!inTree.containsKey(currHop)) 
               {   // intermediate path not found
-                  System.out.println("**Aborting Message send in node " +id+" for hop "+currHop+" due to lack of path**");
+                  System.out.println("[ABORT]: Aborting Message send in node " +id+" for hop "+currHop+" due to lack of path**");
                   return;
               }
               currHop= inTree.get(currHop).get(0);
@@ -465,29 +599,28 @@ public class Node {
           Collections.reverse(path);
           
           int firstHop = path.get(0);
+          path.remove(0);
 
           if(receivedTrees.get(firstHop)==null)
-            { System.out.println("** Aborting Message send as relevant intree not received **"); 
+            { System.out.println("[ABORT]:  Aborting Message send as relevant intree not received **"); 
               return;
             }
           
-          System.out.println("Path from my own intree at node "+id+" is "+path);
-          System.out.println("Received tree for this first hop is "+receivedTrees.get(firstHop));
+        
 
           List<Integer> initialPath  = new ArrayList<>();
           int initialFirstHop = receivedTrees.get(firstHop).get(id).get(0);
-          System.out.println("intiialFirstHop is "+initialFirstHop);
+        
           while(initialFirstHop!=firstHop)
           {
               initialPath.add(initialFirstHop);
               initialFirstHop = receivedTrees.get(firstHop).get(initialFirstHop).get(0);
           }
-          initialPath.addAll(path);
-
-          System.out.println("&&&&&&& Message "+message+" from "+id +" to destination "+destination+" will take path "+initialPath+"&&&&&");
+          initialPath.add(firstHop);
+          System.out.println("[LOG]: Original Message "+message+" from "+id +" to destination "+destination+" will take path "+initialPath+"&&&&&");
           
 
-          String messageToBeSent = convertToDataMessage(message,initialPath);
+          String messageToBeSent = convertToDataMessage(message,initialPath,path,id);
 
           writeToFile(messageToBeSent);
         //   if(nextHop == destination)
@@ -502,16 +635,33 @@ public class Node {
 
     }
 
-  private String convertToDataMessage(String msg, List<Integer>initialPath)
+  private String convertToDataMessage(String msg, List<Integer>initialPath, List<Integer>path, int src)
   {   StringBuilder sb = new StringBuilder();  
       sb.append("data ");
-      sb.append(id);
+      sb.append(src);
       sb.append(" ");
+      if(initialPath.size()>0)
+      {
+      sb.append("(");
       for(Integer i: initialPath)
+      {
+          sb.append(i);
+          sb.append(",");
+      }
+      sb.deleteCharAt(sb.length()-1);
+      sb.append(")");
+      sb.append(" ");
+
+    }
+
+    if(path.size()>0)
+    { 
+      for(Integer i: path) 
       {
           sb.append(i);
           sb.append(" ");
       }
+    }
       sb.append("begin ");
       sb.append(msg);
 
